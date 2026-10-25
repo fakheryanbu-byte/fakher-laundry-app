@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>فندق فخر ينبع - نظام تسليم واستلام المفارش للمغسلة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+            font-size: 1.2rem;
+        }
+        button, input, select {
+            touch-action: manipulation;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-voucher, #printable-voucher * {
+                visibility: visible;
+            }
+            #printable-voucher {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 12px;
+                background: white !important;
+                box-shadow: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .field {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: #0f172a;
+        }
+        .field:focus {
+            outline: none;
+            background: #fff;
+            border-color: #0f172a;
+        }
+        .tab-btn {
+            padding: 0.75rem 0.5rem;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            font-size: 1.15rem;
+        }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-active {
+            color: #0f172a;
+            font-weight: 900;
+            border-bottom-color: #0f172a;
+        }
+    </style>
+</head>
+<body class="text-slate-900 min-h-screen flex flex-col pb-44 sm:pb-16 text-lg">
+
+    <header class="bg-white/95 backdrop-blur border-b border-slate-200 no-print sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-11 h-11 rounded-2xl bg-slate-900 text-amber-300 flex items-center justify-center shrink-0 shadow">
+                    <i class="fa-solid fa-hotel text-xl"></i>
+                </div>
+                <h1 id="header-hotel-name" onclick="openHotelEditModal()" title="تعديل اسم الفندق" class="text-xl sm:text-2xl font-black text-slate-900 truncate cursor-pointer tracking-tight" style="font-family: 'Cairo', sans-serif;">فندق فخر ينبع</h1>
+            </div>
+
+            <div class="flex items-center gap-2.5 shrink-0">
+                <select id="active-laundry-select" onchange="handleLaundryChange(this.value)" class="bg-slate-100 text-slate-900 font-extrabold text-lg pl-3 pr-3 py-2.5 rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-slate-900 max-w-[12rem] sm:max-w-xs shadow-sm">
+                </select>
+                <button onclick="openMobileInstallModal()" class="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 active:bg-slate-200 flex items-center justify-center shadow-sm" title="تثبيت بالجوال">
+                    <i class="fa-solid fa-mobile-screen-button text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <nav class="hidden sm:flex max-w-6xl mx-auto px-6 gap-8 text-lg font-bold">
+            <button onclick="switchTab('worker')" id="tab-worker" class="tab-btn tab-active">تسليم المفارش</button>
+            <button onclick="switchTab('batches')" id="tab-batches" class="tab-btn">السجل <span id="batches-count-badge" class="text-sm font-black bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full mr-1.5">0</span></button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn">المغاسل والأسعار</button>
+        </nav>
+    </header>
+
+    <main class="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-5 sm:py-8 no-print">
+
+        <section id="view-worker" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7">
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight" style="font-family: 'Cairo', sans-serif;">أصناف المفارش والبياضات</h2>
+                    <button onclick="openAddItemModal()" class="text-blue-700 active:text-blue-900 text-lg font-extrabold flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200">
+                        <i class="fa-solid fa-plus"></i><span>صنف جديد</span>
+                    </button>
+                </div>
+                <!-- قائمة عمودية بأحجام خط كبرى مطابقة لأسماء قروبات واتساب -->
+                <div id="worker-items-list-container" class="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-sm">
+                </div>
+            </div>
+
+            <!-- Checkout / Summary Section -->
+            <div id="worker-checkout-section" class="lg:col-span-5 scroll-mt-24">
+                <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 sticky top-28 space-y-5 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight" style="font-family: 'Cairo', sans-serif;">الدفعة <span class="font-mono text-slate-400">#<span id="current-batch-no">101</span></span></h3>
+                        <button onclick="clearWorkerCart()" class="text-slate-400 hover:text-red-600 text-lg font-bold" title="مسح الدفعة">
+                            <i class="fa-solid fa-trash-can text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <label class="block">
+                            <span class="block text-base font-extrabold text-slate-700 mb-1">التسليم للمغسلة</span>
+                            <input type="date" id="send-date" onchange="handleSendDateChange()" class="field font-mono">
+                        </label>
+                        <label class="block">
+                            <span class="block text-base font-extrabold text-slate-700 mb-1">الاستلام (اليوم التالي)</span>
+                            <input type="date" id="return-date" onchange="updateWorkerSummary()" class="field font-mono">
+                        </label>
+                        <label class="block">
+                            <span class="block text-base font-extrabold text-slate-700 mb-1">عدد خروج الغرف</span>
+                            <input type="number" id="checkout-rooms-count" min="0" inputmode="numeric" placeholder="0" class="field font-mono text-center text-xl font-black">
+                        </label>
+                        <label class="block">
+                            <span class="block text-base font-extrabold text-slate-700 mb-1">اسم العامل المسلّم</span>
+                            <input type="text" id="worker-name" placeholder="اختياري" class="field">
+                        </label>
+                        <label class="block col-span-full">
+                            <span class="block text-base font-extrabold text-slate-700 mb-1">ملاحظات</span>
+                            <input type="text" id="batch-notes" placeholder="اختياري" class="field">
+                        </label>
+                    </div>
+
+                    <div id="worker-cart-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pt-2 border-t border-slate-100"></div>
+
+                    <div class="flex items-baseline justify-between border-t border-slate-100 pt-4">
+                        <span class="text-lg font-extrabold text-slate-600"><span id="summary-total-pieces">0 قطعة</span></span>
+                        <div class="text-3xl font-black text-slate-900 font-mono">
+                            <span id="summary-total-price">0.00</span> <span class="text-lg font-bold text-slate-500">ريال</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <!-- زر معاينة وتصدير PDF (بدون الأزرار الخضراء المباشرة في الصفحة الأولى) -->
+                        <button onclick="submitBatchAndPreviewPDF()" class="w-full bg-slate-900 active:bg-slate-800 hover:bg-slate-800 text-white font-black py-4 rounded-2xl transition flex items-center justify-center gap-3 text-xl shadow">
+                            <i class="fa-regular fa-file-pdf text-red-400 text-2xl"></i>
+                            <span>معاينة وتصدير PDF / واتساب</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-batches" class="hidden space-y-6">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute right-4 top-4 text-slate-400 text-xl"></i>
+                    <input type="text" id="batch-search" oninput="renderBatchesList()" placeholder="ابحث برقم الدفعة أو المغسلة أو العامل..." 
+                        class="w-full pr-12 pl-4 py-3.5 border border-slate-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+
+                <div class="flex flex-wrap gap-2.5 w-full md:w-auto justify-center">
+                    <button onclick="setBatchFilter('all')" id="bfilter-all" class="px-4.5 py-2.5 rounded-xl text-lg font-black bg-slate-900 text-white">الكل</button>
+                    <button onclick="setBatchFilter('in_laundry')" id="bfilter-in_laundry" class="px-4.5 py-2.5 rounded-xl text-lg font-black bg-slate-100 text-slate-700 hover:bg-slate-200">في المغسلة (بانتظار الاستلام)</button>
+                    <button onclick="setBatchFilter('received')" id="bfilter-received" class="px-4.5 py-2.5 rounded-xl text-lg font-black bg-slate-100 text-slate-700 hover:bg-slate-200">تم الاستلام بالفندق ✓</button>
+                </div>
+            </div>
+
+            <div id="batches-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </section>
+
+        <section id="view-settings" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-5 space-y-6">
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4.5">
+                        <div class="border-b border-slate-100 pb-4">
+                            <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3 tracking-tight" style="font-family: 'Cairo', sans-serif;">
+                                <i class="fa-solid fa-store text-blue-700 text-2xl"></i>
+                                <span>إضافة وتسمية مغاسل الفندق</span>
+                            </h2>
+                            <p class="text-lg text-slate-600 mt-1">أضف أكثر من مغسلة مع رقم الواتساب والأسعار المستقلة لكل مغسلة.</p>
+                        </div>
+
+                        <div class="bg-slate-50 p-4.5 rounded-xl border border-slate-200 space-y-3.5">
+                            <h3 class="text-lg font-black text-blue-900">إضافة مغسلة جديدة:</h3>
+                            <div class="space-y-3">
+                                <input type="text" id="new-laundry-name" placeholder="اسم المغسلة (مثال: مغسلة جديدة)" 
+                                    class="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="text" id="new-laundry-phone" placeholder="جوال واتساب (05XXXXXXXX)" dir="ltr"
+                                        class="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-lg font-mono text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                    <input type="text" id="new-laundry-address" placeholder="العنوان أو الفرع"
+                                        class="w-full px-4 py-3.5 bg-white border border-slate-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                </div>
+                                <button onclick="addNewLaundry()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-black py-3.5 rounded-xl text-lg transition flex items-center justify-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-plus-circle text-xl"></i>
+                                    <span>حفظ وإضافة المغسلة</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="laundries-list-container" class="space-y-3">
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3 tracking-tight" style="font-family: 'Cairo', sans-serif;">
+                            <i class="fa-solid fa-bed text-emerald-600 text-2xl"></i>
+                            <span>إضافة مفرش أو صنف جديد</span>
+                        </h2>
+                        <p class="text-lg text-slate-600">أضف أي مفرش أو بياضات جديدة لتظهر فوراً في لوحة العامل والأسعار.</p>
+                        <div class="flex flex-col sm:flex-row gap-3 pt-1">
+                            <input type="text" id="settings-new-item-name" placeholder="اسم الصنف (عربي)..." 
+                                class="flex-1 px-4 py-3.5 border border-slate-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <input type="text" id="settings-new-item-en" placeholder="English Name..." 
+                                class="flex-1 px-4 py-3.5 border border-slate-300 rounded-xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <input type="number" id="settings-new-item-price" step="0.25" min="0" placeholder="السعر" 
+                                class="w-full sm:w-28 px-4 py-3.5 border border-slate-300 rounded-xl text-lg font-mono font-bold text-center focus:outline-none focus:ring-2 focus:ring-emerald-600">
+                            <button onclick="addCustomItemFromSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-3.5 rounded-xl text-lg transition shrink-0">
+                                <i class="fa-solid fa-plus ml-1"></i>إضافة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7">
+                    <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4 mb-4">
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-900 flex items-center gap-3 tracking-tight" style="font-family: 'Cairo', sans-serif;">
+                                    <i class="fa-solid fa-tags text-amber-500 text-2xl"></i>
+                                    <span>تسعيرة الأصناف لدى: <span id="pricing-laundry-title" class="text-blue-700 underline font-black"></span></span>
+                                </h2>
+                                <p class="text-lg text-slate-600 mt-1">عدل سعر أي صنف بالريال ليتم اعتماده تلقائياً في حسابات الدفعات.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-blue-50/80 p-4 rounded-xl border border-blue-200 mb-4 text-lg">
+                            <div>
+                                <label class="block font-black text-blue-950 mb-1.5">اسم المغسلة:</label>
+                                <input type="text" id="edit-active-laundry-name" onchange="updateActiveLaundryInfo()" 
+                                    class="w-full px-3.5 py-3 bg-white border border-blue-300 rounded-xl font-bold text-slate-900 text-lg">
+                            </div>
+                            <div>
+                                <label class="block font-black text-blue-950 mb-1.5">رقم واتساب المغسلة:</label>
+                                <input type="text" id="edit-active-laundry-phone" dir="ltr" onchange="updateActiveLaundryInfo()" 
+                                    class="w-full px-3.5 py-3 bg-white border border-blue-300 rounded-xl font-mono font-bold text-center text-slate-900 text-lg">
+                            </div>
+                            <div>
+                                <label class="block font-black text-blue-950 mb-1.5">العنوان / الفرع:</label>
+                                <input type="text" id="edit-active-laundry-address" onchange="updateActiveLaundryInfo()" 
+                                    class="w-full px-3.5 py-3 bg-white border border-blue-300 rounded-xl text-slate-900 font-bold text-lg">
+                            </div>
+                        </div>
+
+                        <div id="pricing-items-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[540px] overflow-y-auto custom-scrollbar pr-1">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <div id="mobile-floating-cart-bar" class="sm:hidden fixed bottom-20 inset-x-3 bg-slate-900 text-white pl-3 pr-4 py-3 rounded-2xl shadow-xl z-40 hidden flex items-center justify-between gap-3 no-print">
+        <div onclick="scrollToWorkerCheckout()" class="flex items-baseline gap-2.5 flex-1 cursor-pointer">
+            <span class="font-mono font-black text-2xl text-white"><span id="mob-bar-price">0.00</span></span>
+            <span class="text-base text-slate-300 font-bold">ر.س · <span id="mob-bar-pieces">0</span> قطعة</span>
+        </div>
+        <button onclick="submitBatchAndPreviewPDF()" class="bg-blue-600 active:bg-blue-700 text-white font-black px-4.5 py-3 rounded-xl text-lg flex items-center gap-2">
+            <i class="fa-regular fa-file-pdf text-xl"></i>
+            <span>معاينة PDF</span>
+        </button>
+    </div>
+
+    <nav class="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 grid grid-cols-3 py-2 px-2 text-sm no-print font-extrabold">
+        <button onclick="switchTab('worker')" id="mob-tab-worker" class="flex flex-col items-center justify-center py-1 text-slate-900 font-black relative">
+            <i class="fa-solid fa-basket-shopping text-2xl mb-1"></i>
+            <span>تسليم</span>
+        </button>
+        <button onclick="switchTab('batches')" id="mob-tab-batches" class="flex flex-col items-center justify-center py-1 text-slate-400 relative">
+            <i class="fa-solid fa-clock-rotate-left text-2xl mb-1"></i>
+            <span>السجل</span>
+            <span id="mob-batches-badge" class="absolute top-0 left-1/3 bg-slate-900 text-white text-xs font-black px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="switchTab('settings')" id="mob-tab-settings" class="flex flex-col items-center justify-center py-1 text-slate-400 relative">
+            <i class="fa-solid fa-sliders text-2xl mb-1"></i>
+            <span>الإعدادات</span>
+        </button>
+    </nav>
+
+    <div id="mobile-install-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-black text-xl flex items-center gap-2.5" style="font-family: 'Cairo', sans-serif;">
+                    <i class="fa-solid fa-mobile-screen-button text-emerald-400 text-2xl"></i>
+                    <span>تشغيل وتثبيت النظام على الجوال</span>
+                </h3>
+                <button onclick="closeMobileInstallModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-lg leading-relaxed text-slate-700 font-bold">
+                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-emerald-950">
+                    <i class="fa-solid fa-circle-check text-emerald-600 ml-2 text-xl"></i>
+                    النظام يحفظ المغسلة المختارة واسم الفندق والأسعار تلقائياً في جهازك لتعمل كالإعداد الافتراضي دائماً.
+                </div>
+
+                <div class="space-y-3">
+                    <p class="font-black text-slate-900">1. تحميل نسخة الجوال وإرسالها عبر واتساب:</p>
+                    <button onclick="downloadStandaloneMobileApp()" class="w-full bg-blue-700 active:bg-blue-800 text-white font-black py-4 px-4 rounded-xl shadow flex items-center justify-center gap-2 text-xl">
+                        <i class="fa-solid fa-download text-xl"></i>
+                        <span>تحميل ملف التطبيق للجوال (.html)</span>
+                    </button>
+                    <p class="text-base text-slate-500 font-semibold">أرسل الملف المحمّل لجوال العامل عبر واتساب وافتحه بمتصفح Chrome أو Safari.</p>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button onclick="closeMobileInstallModal()" class="px-6 py-3 rounded-xl bg-slate-900 text-white font-black text-xl">تم، فهمت</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotel Name Edit Modal -->
+    <div id="hotel-name-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-black text-xl flex items-center gap-2.5" style="font-family: 'Cairo', sans-serif;">
+                    <i class="fa-solid fa-hotel text-amber-400 text-2xl"></i>
+                    <span>تخصيص اسم الفندق أو الشقق الفندقية</span>
+                </h3>
+                <button onclick="closeHotelEditModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-lg font-bold">
+                <div>
+                    <label class="block font-black text-slate-800 mb-2">اسم الفندق (يتم حفظه واعتماده تلقائياً):</label>
+                    <input type="text" id="modal-hotel-name-input" placeholder="مثال: فندق فخر ينبع" 
+                        class="w-full px-4 py-3.5 border border-slate-300 rounded-xl font-black text-xl focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeHotelEditModal()" class="px-5 py-3 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-lg">إلغاء</button>
+                    <button onclick="saveHotelName()" class="px-6 py-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-lg">حفظ واعتماد</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Item Modal -->
+    <div id="add-item-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-black text-xl flex items-center gap-2.5" style="font-family: 'Cairo', sans-serif;">
+                    <i class="fa-solid fa-circle-plus text-amber-400 text-2xl"></i>
+                    <span>إضافة مفرش أو صنف جديد</span>
+                </h3>
+                <button onclick="closeAddItemModal()" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-2xl"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 text-lg font-bold">
+                <div>
+                    <label class="block font-black text-slate-800 mb-2">اسم الصنف (بالعربية):</label>
+                    <input type="text" id="modal-new-item-ar" placeholder="مثال: فرشة إضافية" 
+                        class="w-full px-4 py-3.5 border border-slate-300 rounded-xl font-black text-xl focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div>
+                    <label class="block font-black text-slate-800 mb-2">اسم الصنف (بالإنجليزية - English Name):</label>
+                    <input type="text" id="modal-new-item-en" placeholder="e.g., Extra Mattress" 
+                        class="w-full px-4 py-3.5 border border-slate-300 rounded-xl font-black text-xl focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div>
+                    <label class="block font-black text-slate-800 mb-2">سعر الغسيل للقطعة (ريال):</label>
+                    <input type="number" id="modal-new-item-price" step="0.25" min="0" value="3" 
+                        class="w-full px-4 py-3.5 border border-slate-300 rounded-xl font-mono font-black text-xl focus:outline-none focus:ring-2 focus:ring-blue-600">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button onclick="closeAddItemModal()" class="px-5 py-3 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-lg">إلغاء</button>
+                    <button onclick="confirmAddNewItemFromModal()" class="px-6 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-black text-lg">إضافة الصنف</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voucher Preview & PDF Modal (تم حذف الشريط العلوي والأزرار المتعددة بناءً على طلبك تماماً) -->
+    <div id="voucher-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-2 sm:p-5 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto max-h-[96vh] flex flex-col">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center gap-3 no-print shrink-0">
+                <div class="flex items-center gap-3 text-xl font-black" style="font-family: 'Cairo', sans-serif;">
+                    <i class="fa-solid fa-file-invoice text-amber-400 text-2xl"></i>
+                    <span>بيان تسليم مفارش فندق فخر ينبع للمغسلة</span>
+                </div>
+                <button onclick="closeVoucherModal()" class="bg-slate-800 hover:bg-slate-700 text-white w-10 h-10 rounded-xl text-xl font-black flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="bg-green-50 border-b border-green-200 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 no-print shrink-0 text-lg font-bold">
+                <span class="text-green-950 font-black flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-green-600 text-2xl"></i>رقم جوال المغسلة المستلمة:
+                </span>
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <input type="text" id="modal-wa-phone" dir="ltr" placeholder="05XXXXXXXX" 
+                        class="px-4 py-3 border border-green-300 rounded-xl font-mono font-black text-lg text-center bg-white w-full sm:w-56">
+                    <button onclick="sendBatchWhatsApp(activePreviewBatch.batchNo)" class="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-xl font-black text-lg shrink-0 transition shadow-sm flex items-center gap-2">
+                        <i class="fa-brands fa-whatsapp text-xl"></i>
+                        <span>إرسال الآن</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-y-auto p-4 sm:p-6 bg-slate-200 flex-1 flex justify-center custom-scrollbar">
+                <div id="printable-voucher" class="p-6 sm:p-8 text-slate-900 bg-white shadow-xl w-full max-w-[760px] rounded-xl font-bold" dir="rtl">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-box" class="fixed bottom-24 sm:bottom-6 left-6 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 text-xl font-black flex items-center gap-3.5 transition-all duration-300 opacity-0 pointer-events-none z-50 no-print">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-2xl"></i>
+        <span id="toast-text">تم الحفظ بنجاح</span>
+    </div>
+
+    <script>
+        let hotelName = 'فندق فخر ينبع';
+
+        // الأصناف بالترتيب المطلوب مع واقي مخدة وواقي سرير بين كيس مخدة والحشوات والترجمة والأسعار المحدثة
+        let hotelLinenItems = [
+            { id: 'item_pillow_slip', ar: 'كيس مخدة', en: 'Pillowslip', icon: 'fa-square' },
+            { id: 'item_waterproof_pillow', ar: 'واقي مخدة', en: 'Waterproof Pillow', icon: 'fa-shield-heart' },
+            { id: 'item_bed_protector', ar: 'واقي سرير', en: 'Bed Protector', icon: 'fa-mattress-pillow' },
+            { id: 'item_big_duvet', ar: 'حشوة لحاف كبير', en: 'Big Duvet Filler', icon: 'fa-bed' },
+            { id: 'item_small_duvet', ar: 'حشوة لحاف صغير', en: 'Small Duvet Filler', icon: 'fa-shirt' },
+            { id: 'item_regular_sheet', ar: 'شرشف كبير', en: 'Big Bed Sheet', icon: 'fa-sheet-plastic' },
+            { id: 'item_fitted_sheet', ar: 'شرشف صغير', en: 'Small Bed Sheet', icon: 'fa-maximize' },
+            { id: 'item_big_towel', ar: 'منشفة كبيرة', en: 'Big Towel', icon: 'fa-rug' },
+            { id: 'item_blanket', ar: 'بطانية', en: 'Blanket', icon: 'fa-box-tissue' },
+            { id: 'item_curtain', ar: 'ستارة', en: 'Curtains', icon: 'fa-booth-curtain' },
+            { id: 'item_dinner_table', ar: 'مفرش سفرة كبير', en: 'Big Dinner Table', icon: 'fa-utensils' },
+            { id: 'item_big_duvet_cover', ar: 'كيس لحاف كبير', en: 'Big Duvet Cover', icon: 'fa-shirt' },
+            { id: 'item_small_duvet_cover', ar: 'كيس لحاف صغير', en: 'Small Duvet Cover', icon: 'fa-shirt' },
+            { id: 'item_pillow', ar: 'مخدة', en: 'Pillow', icon: 'fa-bed' }
+        ];
+
+        // الأسعار المحدثة والمطابقة لجدول مقارنة أسعار المغاسل المرفق رسمياً
+        let laundries = [
+            {
+                id: 'laundry_wasaif',
+                name: 'مغسلة وصايف',
+                phone: '0573186974',
+                address: 'ينبع - طريق الشاحنات',
+                prices: {
+                    item_pillow_slip: 0.25,
+                    item_waterproof_pillow: 2.0,
+                    item_bed_protector: 3.0,
+                    item_big_duvet: 4.0,
+                    item_small_duvet: 4.0,
+                    item_regular_sheet: 1.50,
+                    item_fitted_sheet: 1.0,
+                    item_big_towel: 1.0,
+                    item_blanket: 6.0,
+                    item_curtain: 3.0,
+                    item_dinner_table: 3.0,
+                    item_big_duvet_cover: 1.50,
+                    item_small_duvet_cover: 1.50,
+                    item_pillow: 5.0
+                }
+            },
+            {
+                id: 'laundry_ahlam',
+                name: 'مغسلة الأحلام (محمد النزاوي)',
+                phone: '0557738288',
+                address: 'ينبع البحر',
+                prices: {
+                    item_pillow_slip: 0.50,
+                    item_waterproof_pillow: 3.0,
+                    item_bed_protector: 3.0,
+                    item_big_duvet: 4.0,
+                    item_small_duvet: 4.0,
+                    item_regular_sheet: 2.0,
+                    item_fitted_sheet: 2.0,
+                    item_big_towel: 1.0,
+                    item_blanket: 4.0,
+                    item_curtain: 5.0, // كبيرة 5 - صغيرة 3
+                    item_dinner_table: 3.0,
+                    item_big_duvet_cover: 2.0,
+                    item_small_duvet_cover: 2.0,
+                    item_pillow: 2.0
+                }
+            },
+            {
+                id: 'laundry_etqan',
+                name: 'إتقان الرياض',
+                phone: '0542244587',
+                address: 'الفرع الرئيسي',
+                prices: {
+                    item_pillow_slip: 0.65,
+                    item_waterproof_pillow: 2.50,
+                    item_bed_protector: 3.0,
+                    item_big_duvet: 6.0,
+                    item_small_duvet: 4.0,
+                    item_regular_sheet: 1.90,
+                    item_fitted_sheet: 1.70,
+                    item_big_towel: 1.50,
+                    item_blanket: 5.0,
+                    item_curtain: 5.0,
+                    item_dinner_table: 3.0,
+                    item_big_duvet_cover: 3.50,
+                    item_small_duvet_cover: 3.0,
+                    item_pillow: 2.0
+                }
+            }
+        ];
+
+        let activeLaundryId = 'laundry_wasaif';
+        let workerCart = {};
+        let nextBatchNo = 101;
+        let currentBatchFilter = 'all';
+        let activePreviewBatch = null;
+
+        let batchesHistory = [];
+
+        function getFormattedDate(dateObj) {
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function getNextDayDateString(dateStr) {
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            d.setDate(d.getDate() + 1);
+            return getFormattedDate(d);
+        }
+
+        function saveAppStateToStorage() {
+            try {
+                const state = {
+                    hotelName,
+                    hotelLinenItems,
+                    laundries,
+                    activeLaundryId,
+                    nextBatchNo,
+                    batchesHistory
+                };
+                localStorage.setItem('hotel_linen_laundry_app_v25', JSON.stringify(state));
+            } catch (e) {
+                console.warn('Storage save failed', e);
+            }
+        }
+
+        function loadAppStateFromStorage() {
+            try {
+                const raw = localStorage.getItem('hotel_linen_laundry_app_v25');
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                if (saved.hotelName) hotelName = saved.hotelName;
+                if (Array.isArray(saved.hotelLinenItems) && saved.hotelLinenItems.length > 0) hotelLinenItems = saved.hotelLinenItems;
+                if (Array.isArray(saved.laundries) && saved.laundries.length > 0) laundries = saved.laundries;
+                if (saved.activeLaundryId) activeLaundryId = saved.activeLaundryId;
+                if (saved.nextBatchNo) nextBatchNo = saved.nextBatchNo;
+                if (Array.isArray(saved.batchesHistory)) batchesHistory = saved.batchesHistory;
+            } catch (e) {
+                console.warn('Storage load failed', e);
+            }
+        }
+
+        window.onload = function () {
+            loadAppStateFromStorage();
+
+            const today = new Date();
+            const todayStr = getFormattedDate(today);
+            const tomorrowStr = getNextDayDateString(todayStr);
+
+            document.getElementById('header-hotel-name').textContent = hotelName;
+            document.getElementById('send-date').value = todayStr;
+            document.getElementById('return-date').value = tomorrowStr;
+            document.getElementById('current-batch-no').textContent = nextBatchNo;
+
+            renderLaundrySelector();
+            renderWorkerItems();
+            updateWorkerSummary();
+            renderBatchesList();
+            renderSettingsView();
+            updateTopStats();
+        };
+
+        function scrollToWorkerCheckout() {
+            const el = document.getElementById('worker-checkout-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function openMobileInstallModal() {
+            document.getElementById('mobile-install-modal').classList.remove('hidden');
+        }
+
+        function closeMobileInstallModal() {
+            document.getElementById('mobile-install-modal').classList.add('hidden');
+        }
+
+        function downloadStandaloneMobileApp() {
+            const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'مفارش_فندق_فخر_ينبع.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('تم تحميل تطبيق فندق فخر ينبع للجوال بنجاح');
+        }
+
+        function handleSendDateChange() {
+            const sendDateVal = document.getElementById('send-date').value;
+            if (sendDateVal) {
+                const nextDay = getNextDayDateString(sendDateVal);
+                document.getElementById('return-date').value = nextDay;
+                updateWorkerSummary();
+                showToast('تم ضبط موعد الاستلام تلقائياً لليوم التالي: ' + nextDay);
+            }
+        }
+
+        function getActiveLaundry() {
+            return laundries.find(l => l.id === activeLaundryId) || laundries[0];
+        }
+
+        function getItemPriceForActiveLaundry(itemId) {
+            const laundry = getActiveLaundry();
+            return (laundry.prices && laundry.prices[itemId] !== undefined) ? laundry.prices[itemId] : 0;
+        }
+
+        function switchTab(tab) {
+            ['worker', 'batches', 'settings'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-${t}`);
+                if (btn) btn.classList.remove('tab-active');
+                const mobBtn = document.getElementById(`mob-tab-${t}`);
+                if (mobBtn) mobBtn.className = 'flex flex-col items-center justify-center py-1 text-slate-400 relative font-extrabold';
+            });
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (activeBtn) activeBtn.classList.add('tab-active');
+            const activeMob = document.getElementById(`mob-tab-${tab}`);
+            if (activeMob) activeMob.className = 'flex flex-col items-center justify-center py-1 text-slate-900 font-black relative';
+
+            if (tab === 'worker') {
+                renderWorkerItems();
+                updateWorkerSummary();
+            } else {
+                const floatingBar = document.getElementById('mobile-floating-cart-bar');
+                if (floatingBar) floatingBar.classList.add('hidden');
+                if (tab === 'batches') renderBatchesList();
+                else if (tab === 'settings') renderSettingsView();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderLaundrySelector() {
+            const selectEl = document.getElementById('active-laundry-select');
+            selectEl.innerHTML = laundries.map(l => `
+                <option value="${l.id}" ${l.id === activeLaundryId ? 'selected' : ''}>${l.name}</option>
+            `).join('');
+        }
+
+        function handleLaundryChange(newLaundryId) {
+            activeLaundryId = newLaundryId;
+            saveAppStateToStorage();
+            renderLaundrySelector();
+            renderWorkerItems();
+            updateWorkerSummary();
+            renderSettingsView();
+            const active = getActiveLaundry();
+            showToast(`تم تثبيت المغسلة الافتراضية: ${active.name}`);
+        }
+
+        // عرض قائمة عمودية بأحجام خط كبرى مطابقة لأسماء قروبات واتساب بالضبط
+        function renderWorkerItems() {
+            const container = document.getElementById('worker-items-list-container');
+
+            container.innerHTML = hotelLinenItems.map(item => {
+                const qty = workerCart[item.id] || 0;
+                const price = getItemPriceForActiveLaundry(item.id);
+                const isSelected = qty > 0;
+
+                return `
+                    <div class="px-5 py-4 flex items-center justify-between gap-3 transition ${isSelected ? 'bg-blue-50/70' : ''}">
+                        <div class="min-w-0">
+                            <div class="font-black text-slate-900 text-xl tracking-tight" style="font-family: 'Cairo', sans-serif;">${item.ar}</div>
+                            <div class="text-base text-slate-500 font-extrabold">${item.en} · <span class="text-blue-700 font-mono">${price} ر.س</span>${isSelected ? ` · <span class="text-slate-900 font-mono font-black">${(qty * price).toFixed(2)} ر.س</span>` : ''}</div>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="adjustLinenQty('${item.id}', -1)" 
+                                class="w-12 h-12 rounded-full ${isSelected ? 'bg-slate-200 text-slate-900' : 'bg-slate-100 text-slate-400'} font-black text-2xl flex items-center justify-center transition active:scale-95 shadow-sm">
+                                −
+                            </button>
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" value="${qty || ''}" placeholder="0"
+                                onchange="setExactLinenQty('${item.id}', this.value)"
+                                class="w-14 h-12 text-center font-mono font-black text-2xl bg-transparent ${isSelected ? 'text-slate-900' : 'text-slate-400'} focus:outline-none">
+                            <button onclick="adjustLinenQty('${item.id}', 1)" 
+                                class="w-12 h-12 rounded-full bg-slate-900 active:bg-slate-800 text-white font-black text-2xl flex items-center justify-center transition active:scale-95 shadow">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function adjustLinenQty(itemId, delta) {
+            const current = workerCart[itemId] || 0;
+            const next = Math.max(0, current + delta);
+            if (next === 0) delete workerCart[itemId];
+            else workerCart[itemId] = next;
+            renderWorkerItems();
+            updateWorkerSummary();
+        }
+
+        function setExactLinenQty(itemId, value) {
+            const qty = parseInt(value, 10) || 0;
+            if (qty <= 0) delete workerCart[itemId];
+            else workerCart[itemId] = qty;
+            renderWorkerItems();
+            updateWorkerSummary();
+        }
+
+        function clearWorkerCart() {
+            workerCart = {};
+            document.getElementById('batch-notes').value = '';
+            document.getElementById('checkout-rooms-count').value = '';
+            renderWorkerItems();
+            updateWorkerSummary();
+        }
+
+        function updateWorkerSummary() {
+            const listEl = document.getElementById('worker-cart-list');
+            const entries = Object.entries(workerCart);
+            let totalPieces = 0;
+            let totalPrice = 0;
+
+            if (entries.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-4 text-slate-400 font-bold text-lg">لم يتم اختيار أي أصناف بعد</div>`;
+            } else {
+                listEl.innerHTML = entries.map(([itemId, qty]) => {
+                    const item = hotelLinenItems.find(i => i.id === itemId);
+                    if (!item) return '';
+                    const sub = qty * getItemPriceForActiveLaundry(itemId);
+                    totalPieces += qty;
+                    totalPrice += sub;
+
+                    return `
+                        <div class="flex items-center justify-between text-lg py-1 border-b border-dashed border-slate-100">
+                            <span class="text-slate-800 font-bold"><span class="font-mono font-black text-slate-900 text-xl">${qty}</span> × ${item.ar}</span>
+                            <span class="flex items-center gap-3">
+                                <span class="font-mono font-black text-slate-900">${sub.toFixed(2)} ر.س</span>
+                                <button onclick="removeCartItemFully('${itemId}')" class="text-slate-400 hover:text-red-600 p-1" title="حذف الصنف">
+                                    <i class="fa-solid fa-trash-can text-lg"></i>
+                                </button>
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('summary-total-pieces').textContent = `${totalPieces} قطعة`;
+            document.getElementById('summary-total-price').textContent = totalPrice.toFixed(2);
+
+            const mobBar = document.getElementById('mobile-floating-cart-bar');
+            const workerViewVisible = !document.getElementById('view-worker').classList.contains('hidden');
+            if (mobBar) {
+                document.getElementById('mob-bar-pieces').textContent = totalPieces;
+                document.getElementById('mob-bar-price').textContent = totalPrice.toFixed(2);
+                if (totalPieces > 0 && workerViewVisible) mobBar.classList.remove('hidden');
+                else mobBar.classList.add('hidden');
+            }
+        }
+
+        function removeCartItemFully(itemId) {
+            delete workerCart[itemId];
+            renderWorkerItems();
+            updateWorkerSummary();
+            showToast('تم حذف الصنف تماماً من السلة');
+        }
+
+        function submitBatchAndPreviewPDF() {
+            const entries = Object.entries(workerCart);
+            if (entries.length === 0) {
+                showToast('الرجاء اختيار صنف واحد على الأقل وتحديد العدد قبل المعاينة', 'warning');
+                return;
+            }
+
+            const activeLaundry = getActiveLaundry();
+            const sendDate = document.getElementById('send-date').value;
+            const returnDate = document.getElementById('return-date').value;
+            const checkoutRooms = parseInt(document.getElementById('checkout-rooms-count').value, 10) || 0;
+            const workerName = document.getElementById('worker-name').value.trim() || 'مشرف الفندق';
+            const notes = document.getElementById('batch-notes').value.trim() || '-';
+
+            let totalPieces = 0;
+            let totalCost = 0;
+
+            const itemsList = entries.map(([itemId, qty]) => {
+                const item = hotelLinenItems.find(i => i.id === itemId);
+                const unitPrice = getItemPriceForActiveLaundry(itemId);
+                const total = +(qty * unitPrice).toFixed(2);
+                totalPieces += qty;
+                totalCost += total;
+                return {
+                    id: item.id,
+                    ar: item.ar,
+                    en: item.en || '',
+                    qty,
+                    unitPrice,
+                    total
+                };
+            });
+
+            const newBatch = {
+                batchNo: nextBatchNo++,
+                hotelName,
+                laundryId: activeLaundry.id,
+                laundryName: activeLaundry.name,
+                laundryPhone: activeLaundry.phone,
+                workerName,
+                checkoutRooms,
+                notes,
+                sendDate,
+                returnDate,
+                status: 'in_laundry',
+                items: itemsList,
+                totalPieces,
+                totalCost: +totalCost.toFixed(2)
+            };
+
+            batchesHistory.unshift(newBatch);
+            document.getElementById('current-batch-no').textContent = nextBatchNo;
+
+            saveAppStateToStorage();
+            clearWorkerCart();
+            updateTopStats();
+            showToast(`تم اعتماد وتوليد كشف الدفعة رقم #${newBatch.batchNo} بنجاح`);
+
+            openBatchVoucherPreview(newBatch.batchNo);
+        }
+
+        function deleteBatch(batchNo) {
+            if (!confirm(`هل أنت متأكد من حذف الدفعة رقم #${batchNo} نهائياً؟`)) return;
+            batchesHistory = batchesHistory.filter(b => b.batchNo !== batchNo);
+            saveAppStateToStorage();
+            renderBatchesList();
+            updateTopStats();
+            showToast(`تم حذف الدفعة رقم #${batchNo} بالكامل`);
+        }
+
+        function buildBatchWhatsAppMessage(batch) {
+            const itemsLines = batch.items.map(i => `▪️ *${i.ar} (${i.en}):* العدد (${i.qty}) × ${i.unitPrice} ر.س = *${i.total} ريال*`).join('\n');
+            const statusLine = batch.status === 'received' ? '✅ تم الاستلام في الفندق' : '⏳ في المغسلة (مجدول للاستلام في اليوم التالي)';
+            const checkoutRoomsLine = batch.checkoutRooms ? `🚪 *عدد خروج الغرف:* ${batch.checkoutRooms} غرفة\n` : '';
+
+            return `🏨 *بيان تسليم مفارش فندق فخر ينبع للمغسلة*\n` +
+                   `*الجهة:* ${batch.hotelName}\n` +
+                   `*إلى السادة:* ${batch.laundryName}\n` +
+                   `🧾 *رقم الدفعة:* #${batch.batchNo}\n` +
+                   `━━━━━━━━━━━━━━\n` +
+                   `📤 *تاريخ التسليم للمغسلة:* ${batch.sendDate}\n` +
+                   `📥 *موعد الاستلام (اليوم التالي):* *${batch.returnDate}*\n` +
+                   checkoutRoomsLine +
+                   `👷 *الموظف المسلّم:* ${batch.workerName}\n` +
+                   (batch.notes && batch.notes !== '-' ? `📝 *ملاحظات:* ${batch.notes}\n` : '') +
+                   `━━━━━━━━━━━━━━\n` +
+                   `*تفاصيل الأصناف المرسلة:*\n${itemsLines}\n` +
+                   `━━━━━━━━━━━━━━\n` +
+                   `📦 *إجمالي عدد القطع:* *${batch.totalPieces} قطعة*\n` +
+                   `💰 *إجمالي الحساب المعتمد:* *${batch.totalCost.toFixed(2)} ريال*\n` +
+                   `📌 *الحالة:* ${statusLine}`;
+        }
+
+        function formatWhatsAppPhone(rawPhone) {
+            if (!rawPhone) return '';
+            let digits = rawPhone.replace(/\D/g, '');
+            if (digits.startsWith('00966')) digits = digits.substring(2);
+            else if (digits.startsWith('05') && digits.length === 10) digits = '966' + digits.substring(1);
+            else if (digits.startsWith('5') && digits.length === 9) digits = '966' + digits;
+            return digits.length >= 10 ? digits : '';
+        }
+
+        function sendBatchWhatsApp(batchNo) {
+            const batch = batchesHistory.find(b => b.batchNo === batchNo);
+            if (!batch) return;
+
+            const modalInputPhone = document.getElementById('modal-wa-phone')?.value;
+            const rawPhone = modalInputPhone || batch.laundryPhone || '';
+            const phone = formatWhatsAppPhone(rawPhone);
+            const text = encodeURIComponent(buildBatchWhatsAppMessage(batch));
+
+            const url = phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+            window.open(url, '_blank');
+        }
+
+        function openBatchVoucherPreview(batchNo) {
+            const batch = batchesHistory.find(b => b.batchNo === batchNo);
+            if (!batch) return;
+
+            activePreviewBatch = batch;
+            const phoneInput = document.getElementById('modal-wa-phone');
+            if (phoneInput) phoneInput.value = batch.laundryPhone || '';
+
+            const printable = document.getElementById('printable-voucher');
+            printable.innerHTML = `
+                <div class="border-2 border-slate-900 p-6 sm:p-8 rounded-2xl bg-white text-slate-900 font-bold">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-slate-900 pb-5 mb-5 gap-4">
+                        <div>
+                            <div class="text-base font-black text-slate-600">كشف تسليم واستلام مفارش وبياضات فندق فخر ينبع للمغسلة</div>
+                            <h2 class="text-2xl sm:text-3xl font-black text-slate-950 mt-1">${batch.hotelName}</h2>
+                            <div class="text-lg font-black text-blue-900 mt-1.5">المغسلة المستلمة: <span class="underline">${batch.laundryName}</span> (${batch.laundryPhone || '-'})</div>
+                        </div>
+                        <div class="text-left sm:text-center bg-slate-100 border-2 border-slate-300 px-6 py-3 rounded-xl">
+                            <div class="text-sm font-black text-slate-600">رقم كشف الدفعة</div>
+                            <div class="font-mono font-black text-3xl text-red-600">#${batch.batchNo}</div>
+                            <div class="text-base font-black ${batch.status === 'received' ? 'text-emerald-700' : 'text-amber-800'}">
+                                ${batch.status === 'received' ? 'تم الاستلام بالفندق ✓' : 'قيد الغسيل (يستلم في اليوم التالي)'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3.5 bg-slate-50 p-4.5 rounded-xl border border-slate-300 mb-6 text-lg font-bold">
+                        <div>
+                            <span class="text-slate-600 block text-sm font-extrabold">تاريخ التسليم:</span>
+                            <strong class="font-mono text-slate-950 text-lg">${batch.sendDate}</strong>
+                        </div>
+                        <div>
+                            <span class="text-emerald-800 font-black block text-sm">الاستلام (اليوم التالي):</span>
+                            <strong class="font-mono text-emerald-950 text-lg">${batch.returnDate}</strong>
+                        </div>
+                        <div>
+                            <span class="text-amber-900 font-black block text-sm">خروج الغرف:</span>
+                            <strong class="font-mono text-amber-950 text-xl">${batch.checkoutRooms !== undefined ? batch.checkoutRooms : '-'} غرفة</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-600 block text-sm font-extrabold">المسؤول:</span>
+                            <strong class="text-slate-950 text-lg">${batch.workerName}</strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-600 block text-sm font-extrabold">ملاحظات:</span>
+                            <strong class="text-slate-950 text-lg">${batch.notes}</strong>
+                        </div>
+                    </div>
+
+                    <table class="w-full border-2 border-slate-900 border-collapse text-lg">
+                        <thead>
+                            <tr class="bg-slate-900 text-white font-black">
+                                <th class="border border-slate-700 py-3.5 px-4 text-right w-16">#</th>
+                                <th class="border border-slate-700 py-3.5 px-4 text-right">اسم الصنف / Item Description</th>
+                                <th class="border border-slate-700 py-3.5 px-4 text-center w-32">العدد Qty</th>
+                                <th class="border border-slate-700 py-3.5 px-4 text-center w-36">سعر القطعة Price</th>
+                                <th class="border border-slate-700 py-3.5 px-4 text-center w-36">الإجمالي Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${batch.items.map((item, idx) => `
+                                <tr class="border-b border-slate-300 font-bold">
+                                    <td class="border-l border-slate-300 py-3 px-4 font-mono text-center">${idx + 1}</td>
+                                    <td class="border-l border-slate-300 py-3 px-4 font-black text-slate-900 text-xl">${item.ar} <span class="text-slate-600 font-mono font-semibold text-base">(${item.en})</span></td>
+                                    <td class="border-l border-slate-300 py-3 px-4 font-mono font-black text-center text-blue-950 text-xl">${item.qty}</td>
+                                    <td class="border-l border-slate-300 py-3 px-4 font-mono text-center text-slate-800 text-lg">${item.unitPrice.toFixed(2)}</td>
+                                    <td class="py-3 px-4 font-mono font-black text-center text-slate-950 text-xl">${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-100 border-t-2 border-slate-900 font-black text-xl">
+                                <td colspan="2" class="border-l border-slate-400 py-4 px-4 text-left">الإجمالي الكلي للدفعة / Total:</td>
+                                <td class="border-l border-slate-400 py-4 px-4 text-center font-mono text-blue-950 text-2xl">${batch.totalPieces} قطعة</td>
+                                <td class="border-l border-slate-400 py-4 px-4 text-center">-</td>
+                                <td class="py-4 px-4 text-center font-mono text-red-700 text-3xl">${batch.totalCost.toFixed(2)} ر.س</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <div class="grid grid-cols-3 gap-6 mt-10 pt-6 border-t-2 border-dashed border-slate-300 text-lg text-center font-black text-slate-800">
+                        <div>
+                            <div class="text-slate-600 mb-10 font-bold">توقيع مسؤول فندق فخر ينبع (المسلّم)</div>
+                            <div class="border-b-2 border-slate-400 w-40 mx-auto"></div>
+                        </div>
+                        <div>
+                            <div class="text-slate-600 mb-10 font-bold">توقيع مندوب المغسلة (المستلم)</div>
+                            <div class="border-b-2 border-slate-400 w-40 mx-auto"></div>
+                        </div>
+                        <div>
+                            <div class="text-slate-600 mb-10 font-bold">تأكيد الاستلام في اليوم التالي (${batch.returnDate})</div>
+                            <div class="border-b-2 border-slate-400 w-40 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('voucher-modal').classList.remove('hidden');
+        }
+
+        function closeVoucherModal() {
+            document.getElementById('voucher-modal').classList.add('hidden');
+        }
+
+        function setBatchFilter(filter) {
+            currentBatchFilter = filter;
+            ['all', 'in_laundry', 'received'].forEach(f => {
+                const btn = document.getElementById(`bfilter-${f}`);
+                if (f === filter) btn.className = 'px-4.5 py-2.5 rounded-xl text-lg font-black bg-slate-900 text-white';
+                else btn.className = 'px-4.5 py-2.5 rounded-xl text-lg font-black bg-slate-100 text-slate-700 hover:bg-slate-200';
+            });
+            renderBatchesList();
+        }
+
+        function renderBatchesList() {
+            const container = document.getElementById('batches-grid');
+            const query = (document.getElementById('batch-search')?.value || '').trim().toLowerCase();
+
+            const filtered = batchesHistory.filter(b => {
+                const matchStatus = currentBatchFilter === 'all' || b.status === currentBatchFilter;
+                const matchSearch =
+                    b.batchNo.toString().includes(query) ||
+                    b.laundryName.toLowerCase().includes(query) ||
+                    b.workerName.toLowerCase().includes(query) ||
+                    b.notes.toLowerCase().includes(query);
+                return matchStatus && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white p-14 rounded-2xl border border-slate-200 text-center text-slate-400 font-bold text-xl">
+                        <i class="fa-solid fa-box-open text-5xl mb-4 block opacity-40"></i>
+                        لا توجد دفعات مفارش مسجلة مطابقة للبحث
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(b => {
+                const isReceived = b.status === 'received';
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border-2 ${isReceived ? 'border-emerald-300' : 'border-amber-300'} p-6 flex flex-col justify-between hover:shadow-md transition">
+                        <div>
+                            <div class="flex justify-between items-start border-b border-slate-100 pb-4 mb-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono font-black text-3xl text-blue-900">#${b.batchNo}</span>
+                                        <span class="text-lg font-black text-slate-800 bg-slate-100 px-3.5 py-1.5 rounded-xl">${b.laundryName}</span>
+                                    </div>
+                                    <p class="text-lg text-slate-600 mt-2 font-extrabold"><i class="fa-solid fa-user-check ml-1.5"></i>المسؤول: ${b.workerName}</p>
+                                </div>
+                                <span class="text-base font-black px-3.5 py-2 rounded-full ${isReceived ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-950 border border-amber-300'}">
+                                    ${isReceived ? 'تم الاستلام بالفندق ✓' : 'في المغسلة ⏳'}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-2.5 bg-slate-50 p-3.5 rounded-xl text-lg mb-4 border border-slate-200 text-center font-bold">
+                                <div>
+                                    <span class="text-slate-500 block text-sm">التسليم:</span>
+                                    <strong class="font-mono text-slate-900 text-lg">${b.sendDate}</strong>
+                                </div>
+                                <div>
+                                    <span class="text-emerald-800 font-black block text-sm">الاستلام:</span>
+                                    <strong class="font-mono text-emerald-950 text-lg">${b.returnDate}</strong>
+                                </div>
+                                <div class="bg-amber-100/80 rounded-xl p-1.5 border border-amber-200">
+                                    <span class="text-amber-950 font-black block text-sm">خروج الغرف:</span>
+                                    <strong class="font-mono text-amber-950 text-xl">${b.checkoutRooms !== undefined ? b.checkoutRooms : '-'}</strong>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 mb-4 max-h-44 overflow-y-auto custom-scrollbar pr-1">
+                                ${b.items.map(i => `
+                                    <div class="flex justify-between text-lg py-1.5 border-b border-dashed border-slate-200 font-bold">
+                                        <span class="text-slate-800">${i.ar} (${i.en}) <span class="font-mono font-black text-blue-900">× ${i.qty}</span></span>
+                                        <span class="font-mono font-black text-slate-900">${i.total.toFixed(2)} ر.س</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-200 space-y-3.5">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-bold text-slate-700">مجموع القطع: <strong class="font-mono text-slate-950 text-xl">${b.totalPieces}</strong></span>
+                                <span class="text-2xl sm:text-3xl font-black text-blue-950 font-mono">${b.totalCost.toFixed(2)} <span class="text-base font-normal">ر.س</span></span>
+                            </div>
+
+                            <button onclick="toggleBatchStatus(${b.batchNo})" 
+                                class="w-full py-3.5 px-4 rounded-xl font-black text-lg transition flex items-center justify-center gap-2.5 ${isReceived ? 'bg-slate-100 text-slate-800 hover:bg-slate-200' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'}">
+                                <i class="fa-solid ${isReceived ? 'fa-rotate-left' : 'fa-check-double'} text-xl"></i>
+                                <span>${isReceived ? 'إرجاع الحالة (في المغسلة)' : 'تأكيد استلام المفارش النظيفة ✓'}</span>
+                            </button>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="openBatchVoucherPreview(${b.batchNo})" class="bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3.5 px-3 rounded-xl text-lg transition flex items-center justify-center gap-2 shadow-sm">
+                                    <i class="fa-solid fa-file-invoice text-amber-400 text-xl"></i>
+                                    <span>معاينة وواتساب</span>
+                                </button>
+                                <button onclick="deleteBatch(${b.batchNo})" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-extrabold py-3.5 px-3 rounded-xl text-lg transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-trash-can text-xl"></i>
+                                    <span>حذف</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleBatchStatus(batchNo) {
+            const batch = batchesHistory.find(b => b.batchNo === batchNo);
+            if (!batch) return;
+            batch.status = batch.status === 'received' ? 'in_laundry' : 'received';
+            saveAppStateToStorage();
+            renderBatchesList();
+            updateTopStats();
+            showToast(batch.status === 'received' ? `تم تأكيد استلام الدفعة #${batchNo} بالفندق` : `تم إعادة الدفعة #${batchNo} إلى قيد الغسيل`);
+        }
+
+        function updateTopStats() {
+            document.getElementById('batches-count-badge').textContent = batchesHistory.length;
+            const mobBadge = document.getElementById('mob-batches-badge');
+            if (mobBadge) mobBadge.textContent = batchesHistory.length;
+        }
+
+        function renderSettingsView() {
+            const active = getActiveLaundry();
+            document.getElementById('pricing-laundry-title').textContent = active.name;
+            document.getElementById('edit-active-laundry-name').value = active.name;
+            document.getElementById('edit-active-laundry-phone').value = active.phone || '';
+            document.getElementById('edit-active-laundry-address').value = active.address || '';
+
+            const listEl = document.getElementById('laundries-list-container');
+            listEl.innerHTML = laundries.map(l => {
+                const isCurrent = l.id === activeLaundryId;
+                return `
+                    <div onclick="handleLaundryChange('${l.id}')" class="cursor-pointer p-4 rounded-xl border-2 transition flex justify-between items-center ${isCurrent ? 'border-blue-700 bg-blue-50/80 shadow-sm' : 'border-slate-200 hover:border-slate-300 bg-white'}">
+                        <div>
+                            <div class="flex items-center gap-2.5">
+                                <span class="font-black text-xl text-slate-900">${l.name}</span>
+                                ${isCurrent ? '<span class="bg-blue-700 text-white text-xs font-black px-3 py-0.5 rounded-full">المغسلة النشطة والمثبتة</span>' : ''}
+                            </div>
+                            <div class="text-lg text-slate-600 font-mono font-bold mt-1.5"><i class="fa-brands fa-whatsapp text-green-600 ml-1.5 text-xl"></i>${l.phone || 'بدون رقم'} • ${l.address || ''}</div>
+                        </div>
+                        <button class="text-lg font-black px-4.5 py-2.5 rounded-xl ${isCurrent ? 'bg-blue-700 text-white shadow' : 'bg-slate-100 text-slate-700'}">
+                            ${isCurrent ? 'مثبتة حالياً' : 'تثبيت'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            const pricingContainer = document.getElementById('pricing-items-list');
+            pricingContainer.innerHTML = hotelLinenItems.map(item => {
+                const price = getItemPriceForActiveLaundry(item.id);
+                return `
+                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white transition shadow-sm">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center text-xl font-black shrink-0 shadow-sm">
+                                <i class="fa-solid ${item.icon || 'fa-bed'} text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="font-black text-xl text-slate-900">${item.ar} <span class="font-bold text-slate-500 font-mono text-lg">(${item.en})</span></div>
+                                <div class="text-base text-slate-500 font-mono">سعر الغسيل</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <input type="number" step="0.25" min="0" value="${price}"
+                                onchange="updateItemPriceForActiveLaundry('${item.id}', this.value)"
+                                class="w-28 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-center font-mono font-black text-2xl text-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-inner">
+                            <span class="text-lg text-slate-700 font-black">ر.س</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateActiveLaundryInfo() {
+            const active = getActiveLaundry();
+            const newName = document.getElementById('edit-active-laundry-name').value.trim();
+            const newPhone = document.getElementById('edit-active-laundry-phone').value.trim();
+            const newAddress = document.getElementById('edit-active-laundry-address').value.trim();
+
+            if (newName) active.name = newName;
+            active.phone = newPhone;
+            active.address = newAddress;
+
+            saveAppStateToStorage();
+            renderLaundrySelector();
+            renderSettingsView();
+            showToast('تم تحديث وحفظ بيانات المغسلة تلقائياً');
+        }
+
+        function addNewLaundry() {
+            const nameEl = document.getElementById('new-laundry-name');
+            const phoneEl = document.getElementById('new-laundry-phone');
+            const addrEl = document.getElementById('new-laundry-address');
+
+            const name = nameEl.value.trim();
+            if (!name) {
+                showToast('الرجاء كتابة اسم المغسلة أولاً', 'warning');
+                return;
+            }
+
+            const currentPrices = JSON.parse(JSON.stringify(getActiveLaundry().prices));
+            const newId = 'laundry_' + Date.now();
+
+            laundries.push({
+                id: newId,
+                name,
+                phone: phoneEl.value.trim(),
+                address: addrEl.value.trim(),
+                prices: currentPrices
+            });
+
+            activeLaundryId = newId;
+            nameEl.value = '';
+            phoneEl.value = '';
+            addrEl.value = '';
+
+            saveAppStateToStorage();
+            renderLaundrySelector();
+            renderSettingsView();
+            renderWorkerItems();
+            showToast(`تمت إضافة وتثبيت مغسلة "${name}" كافتراضية`);
+        }
+
+        function updateItemPriceForActiveLaundry(itemId, newVal) {
+            const price = parseFloat(newVal) || 0;
+            const active = getActiveLaundry();
+            active.prices[itemId] = price;
+            saveAppStateToStorage();
+            renderWorkerItems();
+            updateWorkerSummary();
+            const item = hotelLinenItems.find(i => i.id === itemId);
+            showToast(`تم حفظ سعر "${item ? item.ar : ''}" بـ ${price} ريال لدى ${active.name}`);
+        }
+
+        function openAddItemModal() {
+            document.getElementById('modal-new-item-ar').value = '';
+            document.getElementById('modal-new-item-en').value = '';
+            document.getElementById('modal-new-item-price').value = '3';
+            document.getElementById('add-item-modal').classList.remove('hidden');
+        }
+
+        function closeAddItemModal() {
+            document.getElementById('add-item-modal').classList.add('hidden');
+        }
+
+        function confirmAddNewItemFromModal() {
+            const arName = document.getElementById('modal-new-item-ar').value.trim();
+            const enName = document.getElementById('modal-new-item-en').value.trim() || 'Hotel Item';
+            const price = parseFloat(document.getElementById('modal-new-item-price').value) || 0;
+            if (!arName) {
+                showToast('الرجاء كتابة اسم الصنف بالعربية', 'warning');
+                return;
+            }
+            createNewLinenItem(arName, enName, price);
+            closeAddItemModal();
+        }
+
+        function addCustomItemFromSettings() {
+            const nameInput = document.getElementById('settings-new-item-name');
+            const enInput = document.getElementById('settings-new-item-en');
+            const priceInput = document.getElementById('settings-new-item-price');
+            const arName = nameInput.value.trim();
+            const enName = enInput.value.trim() || 'Hotel Item';
+            const price = parseFloat(priceInput.value) || 0;
+
+            if (!arName) {
+                showToast('الرجاء إدخال اسم الصنف بالعربية', 'warning');
+                return;
+            }
+            createNewLinenItem(arName, enName, price);
+            nameInput.value = '';
+            enInput.value = '';
+            priceInput.value = '';
+        }
+
+        function createNewLinenItem(arName, enName, defaultPrice) {
+            const newId = 'item_' + Date.now();
+            hotelLinenItems.push({
+                id: newId,
+                ar: arName,
+                en: enName,
+                icon: 'fa-bed'
+            });
+
+            laundries.forEach(l => {
+                l.prices[newId] = defaultPrice;
+            });
+
+            saveAppStateToStorage();
+            renderWorkerItems();
+            renderSettingsView();
+            showToast(`تمت إضافة وحفظ الصنف "${arName} (${enName})" بسعر ${defaultPrice} ريال`);
+        }
+
+        function openHotelEditModal() {
+            document.getElementById('modal-hotel-name-input').value = hotelName;
+            document.getElementById('hotel-name-modal').classList.remove('hidden');
+        }
+
+        function closeHotelEditModal() {
+            document.getElementById('hotel-name-modal').classList.add('hidden');
+        }
+
+        function saveHotelName() {
+            const val = document.getElementById('modal-hotel-name-input').value.trim();
+            if (val) {
+                hotelName = val;
+                document.getElementById('header-hotel-name').textContent = hotelName;
+                saveAppStateToStorage();
+                showToast('تم حفظ واعتماد اسم الفندق الجديد بنجاح');
+            }
+            closeHotelEditModal();
+        }
+
+        function showToast(msg, type = 'success') {
+            const box = document.getElementById('toast-box');
+            const txt = document.getElementById('toast-text');
+            const icon = document.getElementById('toast-icon');
+
+            txt.textContent = msg;
+            icon.className = type === 'warning'
+                ? 'fa-solid fa-circle-exclamation text-amber-400 text-2xl'
+                : 'fa-solid fa-circle-check text-emerald-400 text-2xl';
+
+            box.classList.remove('opacity-0', 'pointer-events-none');
+            box.classList.add('opacity-100');
+
+            setTimeout(() => {
+                box.classList.remove('opacity-100');
+                box.classList.add('opacity-0', 'pointer-events-none');
+            }, 3200);
+        }
+    </script>
+</body>
+</html>
